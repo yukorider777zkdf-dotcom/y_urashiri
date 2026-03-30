@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>2次元運動シミュレーション</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .charts { display: grid; gap: 20px; margin-top: 20px; }
+    .chart-wrapper { border: 1px solid #ccc; padding: 10px; background: #f9f9f9; }
+    .chart-wrapper h2 { margin: 0 0 8px; font-size: 1rem; }
+    canvas { border: 1px solid #333; display: block; background: #fff; }
+    label, input, textarea, select { margin: 4px 0; display: block; width: 100%; max-width: 500px; }
+    textarea { font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>2次元運動シミュレーション</h1>
+  <form id="sim-form">
+    <fieldset>
+      <legend>初期条件</legend>
+      <label>初期位置 x0: <input type="number" name="x0" value="1.0" step="any"></label>
+      <label>初期位置 y0: <input type="number" name="y0" value="0" step="any"></label>
+      <label>初速度 vx: <input type="number" name="vx" value="0" step="any"></label>
+      <label>初速度 vy: <input type="number" name="vy" value="1" step="any"></label>
+    </fieldset>
+    <fieldset>
+      <legend>シミュレーション設定</legend>
+      <label>時間刻み dt: <input type="number" name="dt" value="0.05" step="any" min="0.0001"></label>
+      <label>ステップ数 steps: <input type="number" name="steps" value="150"></label>
+    </fieldset>
+    <fieldset>
+      <legend>モデル選択</legend>
+      <label>モデル:
+        <select name="model" id="model-select">
+          <option value="gravity">重力 (gravity)</option>
+          <option value="spring">バネ減衰 (spring)</option>
+          <option value="cubic">立方力 (cubic)</option>
+          <option value="custom">カスタム関数 (custom)</option>
+        </select>
+      </label>
+      <div id="model-explain">現在のモデルに必要なパラメータを入力してください。</div>
+      <div id="params-group">
+        <label>G: <input type="number" name="G" value="1.0" ></label>
+        <label>M: <input type="number" name="M" value="1.0" ></label>
+        <label>k: <input type="number" name="k" value="2.0" ></label>
+        <label>c: <input type="number" name="c" value="0.0" ></label>
+      </div>
+    </fieldset>
+    <fieldset id="custom-force-group" style="display: none;">
+      <legend>カスタム力の定義</legend>
+      <p>fx, fy に直接式を入力できます。変数: x, y, vx, vy, G, M, k, c</p>
+      <p>使用可能な関数: abs, min, max, pow, sqrt, sin, cos, tan, hypot</p>
+      <label>fx(x, y, vx, vy):
+        <textarea name="fx_expr" rows="3" placeholder="例: -k * x - c * vx"></textarea>
+      </label>
+      <label>fy(x, y, vx, vy):
+        <textarea name="fy_expr" rows="3" placeholder="例: -k * y - c * vy"></textarea>
+      </label>
+    </fieldset>
+    <button type="submit">シミュレーション実行</button>
+    <button id="download-button" type="button">Excel ダウンロード</button>
+  </form>
+
+  <div class="charts">
+    <div class="chart-wrapper">
+      <h2>2D 軌跡 (x-y plane)</h2>
+      <canvas id="trajectory-canvas" width="700" height="400"></canvas>
+      <div id="orbit-info" style="margin-top: 10px; font-size: 0.95rem; color: #333;"></div>
+      <div id="summary-table-wrapper" style="margin-top: 12px;">
+        <table id="summary-table" style="width:100%; border-collapse: collapse; font-size:0.95rem;">
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px;">
+        <button id="play-button" type="button">再生</button>
+        <input id="time-slider" type="range" min="0" max="0" value="0" step="1" style="flex:1;" disabled>
+        <span id="time-label">t=0.00</span>
+      </div>
+    </div>
+    <div class="chart-wrapper">
+      <h2>時間発展と面積速度</h2>
+      <canvas id="area-canvas" width="700" height="280"></canvas>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-wrapper">
+      <h2>シミュレーションログ</h2>
+      <table id="log-table" style="width:100%; border-collapse: collapse; font-size:0.95rem;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #ccc; padding:6px;">x0</th>
+            <th style="border:1px solid #ccc; padding:6px;">y0</th>
+            <th style="border:1px solid #ccc; padding:6px;">vx0</th>
+            <th style="border:1px solid #ccc; padding:6px;">vy0</th>
+            <th style="border:1px solid #ccc; padding:6px;">dt</th>
+            <th style="border:1px solid #ccc; padding:6px;">steps</th>
+            <th style="border:1px solid #ccc; padding:6px;">model</th>
+            <th style="border:1px solid #ccc; padding:6px;">a</th>
+            <th style="border:1px solid #ccc; padding:6px;">T</th>
+            <th style="border:1px solid #ccc; padding:6px;">a^3/T^2</th>
+            <th style="border:1px solid #ccc; padding:6px;">function</th>
+          </tr>
+        </thead>
+        <tbody id="log-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('sim-form');
+    const trajectoryCanvas = document.getElementById('trajectory-canvas');
+    const areaCanvas = document.getElementById('area-canvas');
+    const trajectoryCtx = trajectoryCanvas.getContext('2d');
+    const areaCtx = areaCanvas.getContext('2d');
+    const modelSelect = document.getElementById('model-select');
+    const customForceGroup = document.getElementById('custom-force-group');
+    const modelExplain = document.getElementById('model-explain');
+
+    function updateModelUI() {
+      const model = modelSelect.value;
+      if (model === 'custom') {
+        customForceGroup.style.display = 'block';
+        modelExplain.textContent = 'カスタム関数を入力してください。fx, fy の両方が必要です。';
+      } else {
+        customForceGroup.style.display = 'none';
+        if (model === 'gravity') {
+          modelExplain.textContent = '重力モデル: G と M を使います。';
+        } else if (model === 'spring') {
+          modelExplain.textContent = 'バネ減衰モデル: k と c を使います。';
+        } else if (model === 'cubic') {
+          modelExplain.textContent = '立方力モデル: G と M を使います。';
+        } else {
+          modelExplain.textContent = '現在のモデルに必要なパラメータを入力してください。';
+        }
+      }
+    }
+
+    function clampRange(min, max) {
+      if (min === max) {
+        return [min - 1, max + 1];
+      }
+      const delta = (max - min) * 0.1;
+      return [min - delta, max + delta];
+    }
+
+    function formatLabel(value) {
+      return Number(value).toFixed(2);
+    }
+
+    function drawGrid(ctx, width, height, xMin, xMax, yMin, yMax, stepCount = 8, padding = 50) {
+      ctx.save();
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= stepCount; i++) {
+        const gx = padding + (width - padding * 2) * (i / stepCount);
+        ctx.beginPath();
+        ctx.moveTo(gx, padding);
+        ctx.lineTo(gx, height - padding);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= stepCount; i++) {
+        const gy = height - padding - (height - padding * 2) * (i / stepCount);
+        ctx.beginPath();
+        ctx.moveTo(padding, gy);
+        ctx.lineTo(width - padding, gy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawAxes(ctx, width, height, xMin, xMax, yMin, yMax, xLabel, yLabel, padding = 50) {
+      ctx.save();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(padding, height - padding);
+      ctx.lineTo(width - padding, height - padding);
+      ctx.moveTo(padding, height - padding);
+      ctx.lineTo(padding, padding);
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+
+      const ticks = 6;
+      ctx.fillStyle = '#333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let i = 0; i <= ticks; i++) {
+        const x = padding + (width - padding * 2) * (i / ticks);
+        const value = xMin + (xMax - xMin) * (i / ticks);
+        ctx.beginPath();
+        ctx.moveTo(x, height - padding);
+        ctx.lineTo(x, height - padding + 6);
+        ctx.stroke();
+        ctx.fillText(formatLabel(value), x, height - padding + 8);
+      }
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= ticks; i++) {
+        const y = height - padding - (height - padding * 2) * (i / ticks);
+        const value = yMin + (yMax - yMin) * (i / ticks);
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(padding - 6, y);
+        ctx.stroke();
+        ctx.fillText(formatLabel(value), padding - 8, y);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(xLabel, width - padding - 20, height - padding + 25);
+      ctx.save();
+      ctx.translate(padding - 35, padding + 20);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+      ctx.restore();
+    }
+
+    const playButton = document.getElementById('play-button');
+    const timeSlider = document.getElementById('time-slider');
+    const timeLabel = document.getElementById('time-label');
+    const orbitInfo = document.getElementById('orbit-info');
+    const summaryTable = document.getElementById('summary-table');
+    const logTableBody = document.getElementById('log-table-body');
+    let latestPayload = null;
+    let trajectoryAnimationId = null;
+    let trajectoryPoints = [];
+    let trajectoryPlaying = false;
+    let trajectoryParams = null;
+    const maxPlaybackDurationMs = 30000;
+
+    function setSliderRange(length) {
+      timeSlider.max = Math.max(0, length - 1);
+      timeSlider.value = 0;
+      timeSlider.disabled = length === 0;
+    }
+
+    function updateTimeLabel(index) {
+      const point = trajectoryPoints[index];
+      if (!point) {
+        timeLabel.textContent = 't=0.00';
+        return;
+      }
+      timeLabel.textContent = `t=${point.t.toFixed(2)}`;
+    }
+
+    function drawTrajectoryFrame(index) {
+      const points = trajectoryPoints;
+      if (!trajectoryParams || !points.length) {
+        return;
+      }
+      const { padding, width, height, xMin, xMax, yMin, yMax, scaleX, scaleY } = trajectoryParams;
+      trajectoryCtx.clearRect(0, 0, width, height);
+      trajectoryCtx.fillStyle = '#fff';
+      trajectoryCtx.fillRect(0, 0, width, height);
+      drawGrid(trajectoryCtx, width, height, xMin, xMax, yMin, yMax, 10, padding);
+      drawAxes(trajectoryCtx, width, height, xMin, xMax, yMin, yMax, 'x', 'y', padding);
+
+      if (xMin <= 0 && 0 <= xMax && yMin <= 0 && 0 <= yMax) {
+        const ox = padding + (0 - xMin) * scaleX;
+        const oy = height - padding - (0 - yMin) * scaleY;
+        trajectoryCtx.strokeStyle = '#333';
+        trajectoryCtx.lineWidth = 3;
+        trajectoryCtx.beginPath();
+        trajectoryCtx.moveTo(padding, oy);
+        trajectoryCtx.lineTo(width - padding, oy);
+        trajectoryCtx.moveTo(ox, height - padding);
+        trajectoryCtx.lineTo(ox, padding);
+        trajectoryCtx.stroke();
+        trajectoryCtx.fillStyle = '#ffdd57';
+        trajectoryCtx.beginPath();
+        trajectoryCtx.arc(ox, oy, 6, 0, Math.PI * 2);
+        trajectoryCtx.fill();
+        trajectoryCtx.strokeStyle = '#333';
+        trajectoryCtx.lineWidth = 1;
+        trajectoryCtx.beginPath();
+        trajectoryCtx.arc(ox, oy, 6, 0, Math.PI * 2);
+        trajectoryCtx.stroke();
+      }
+
+      trajectoryCtx.strokeStyle = '#0077cc';
+      trajectoryCtx.lineWidth = 2;
+      trajectoryCtx.beginPath();
+      for (let idx = 0; idx <= index; idx++) {
+        const point = points[idx];
+        const px = padding + (point.x - xMin) * scaleX;
+        const py = height - padding - (point.y - yMin) * scaleY;
+        if (idx === 0) {
+          trajectoryCtx.moveTo(px, py);
+        } else {
+          trajectoryCtx.lineTo(px, py);
+        }
+      }
+      trajectoryCtx.stroke();
+
+      if (index >= 0) {
+        const current = points[index];
+        const cx = padding + (current.x - xMin) * scaleX;
+        const cy = height - padding - (current.y - yMin) * scaleY;
+        trajectoryCtx.fillStyle = '#d62828';
+        trajectoryCtx.beginPath();
+        trajectoryCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+        trajectoryCtx.fill();
+      }
+
+      updateTimeLabel(index);
+      timeSlider.value = index;
+    }
+
+    function prepareTrajectoryPlot(points) {
+      trajectoryPoints = points;
+      const padding = 50;
+      const width = trajectoryCanvas.width;
+      const height = trajectoryCanvas.height;
+      const xValues = points.map(p => p.x);
+      const yValues = points.map(p => p.y);
+      let [xMin, xMax] = clampRange(Math.min(...xValues), Math.max(...xValues));
+      let [yMin, yMax] = clampRange(Math.min(...yValues), Math.max(...yValues));
+      if (xMax - xMin === 0) {
+        xMax += 1;
+        xMin -= 1;
+      }
+      if (yMax - yMin === 0) {
+        yMax += 1;
+        yMin -= 1;
+      }
+      const scaleX = (width - padding * 2) / (xMax - xMin);
+      const scaleY = (height - padding * 2) / (yMax - yMin);
+      trajectoryParams = { padding, width, height, xMin, xMax, yMin, yMax, scaleX, scaleY };
+      setSliderRange(points.length);
+      drawTrajectoryFrame(0);
+    }
+
+    function startTrajectoryPlayback() {
+      if (!trajectoryPoints.length) {
+        return;
+      }
+      stopTrajectory();
+      trajectoryPlaying = true;
+      playButton.textContent = '停止';
+      const length = trajectoryPoints.length;
+      const estimatedDurationMs = Math.max(1000, (length / 60) * 1000);
+      const durationMs = Math.min(maxPlaybackDurationMs, estimatedDurationMs);
+      let startTimestamp = null;
+
+      function step(timestamp) {
+        if (!trajectoryPlaying) {
+          return;
+        }
+        if (startTimestamp === null) {
+          startTimestamp = timestamp;
+        }
+        const elapsed = timestamp - startTimestamp;
+        const progress = (elapsed % durationMs) / durationMs;
+        const index = Math.min(length - 1, Math.floor(progress * length));
+        drawTrajectoryFrame(index);
+        trajectoryAnimationId = requestAnimationFrame(step);
+      }
+
+      trajectoryAnimationId = requestAnimationFrame(step);
+    }
+
+    function stopTrajectory() {
+      trajectoryPlaying = false;
+      playButton.textContent = '再生';
+      if (trajectoryAnimationId) {
+        cancelAnimationFrame(trajectoryAnimationId);
+        trajectoryAnimationId = null;
+      }
+    }
+
+    timeSlider.addEventListener('input', () => {
+      stopTrajectory();
+      drawTrajectoryFrame(Number(timeSlider.value));
+    });
+
+    playButton.addEventListener('click', () => {
+      if (trajectoryPlaying) {
+        stopTrajectory();
+      } else {
+        startTrajectoryPlayback();
+      }
+    });
+
+    function drawTrajectory(points) {
+      if (!points.length) {
+        return;
+      }
+      prepareTrajectoryPlot(points);
+      drawArealVelocityPlot(points);
+      updateOrbitInfo(points);
+      if (latestPayload) {
+        updateSummary(latestPayload, points);
+        addLogEntry(latestPayload, points);
+      }
+      startTrajectoryPlayback();
+    }
+
+    function updateOrbitInfo(points) {
+      if (!orbitInfo) {
+        return;
+      }
+      if (!points.length) {
+        orbitInfo.textContent = '';
+        return;
+      }
+      const a = calculateA(points);
+      const period = calculatePeriod(points);
+      let periodText = 'period: 未検出';
+      if (period !== null) {
+        periodText = `period: ${period.toFixed(3)}`;
+      }
+      orbitInfo.textContent = `a = ${a.toFixed(3)} (${periodText})`;
+    }
+
+    function calculateA(points) {
+      const distances = points.map(point => Math.hypot(point.x, point.y));
+      const rMax = Math.max(...distances);
+      const rMin = Math.min(...distances);
+      return (rMax + rMin) / 2;
+    }
+
+    function calculatePeriod(points) {
+      if (points.length < 3) {
+        return null;
+      }
+      const dt = Math.abs(points[1].t - points[0].t);
+      const minTime = dt * 5;
+      const initial = points[0];
+      const initialDistance = Math.hypot(initial.x, initial.y);
+      const tol = Math.max(1e-3, initialDistance * 0.02);
+
+      for (let i = 1; i < points.length; i += 1) {
+        const point = points[i];
+        if (point.t <= minTime) {
+          continue;
+        }
+        const distanceFromStart = Math.hypot(point.x - initial.x, point.y - initial.y);
+        if (distanceFromStart <= tol) {
+          return point.t;
+        }
+      }
+      return null;
+    }
+
+    function updateSummary(payload, points) {
+      if (!summaryTable) {
+        return;
+      }
+      const modelFormulas = {
+        gravity: 'fx=-G*M*x/r^3, fy=-G*M*y/r^3',
+        spring: 'fx=-k*x-c*vx, fy=-k*y-c*vy',
+        cubic: 'fx=-x^3, fy=-y^3',
+      };
+      const functionForm = payload.model === 'custom'
+        ? `fx=${payload.fx_expr || '0'}, fy=${payload.fy_expr || '0'}`
+        : modelFormulas[payload.model] || payload.model;
+      const a = calculateA(points);
+      const period = calculatePeriod(points);
+      const rows = [
+        ['x0', payload.x0],
+        ['y0', payload.y0],
+        ['vx0', payload.vx],
+        ['vy0', payload.vy],
+        ['dt', payload.dt],
+        ['steps', payload.steps],
+        ['model', payload.model],
+        ['function', functionForm],
+        ['a', a.toFixed(3)],
+        ['T', period !== null ? period.toFixed(3) : '未検出'],
+      ];
+      const tbody = rows.map(([label, value]) =>
+        `<tr><td style="padding: 4px 8px; border:1px solid #ccc; font-weight: 600;">${label}</td><td style="padding: 4px 8px; border:1px solid #ccc;">${value}</td></tr>`
+      ).join('');
+      summaryTable.querySelector('tbody').innerHTML = tbody;
+    }
+
+    function addLogEntry(payload, points) {
+      if (!logTableBody) {
+        return;
+      }
+      const a = calculateA(points);
+      const period = calculatePeriod(points);
+      const tValue = period !== null ? period : null;
+      const aCubedOverT2 = period && period > 0 ? (a ** 3 / (period ** 2)) : null;
+      const functionForm = payload.model === 'custom'
+        ? `fx=${payload.fx_expr || '0'}, fy=${payload.fy_expr || '0'}`
+        : ({
+            gravity: 'fx=-G*M*x/r^3, fy=-G*M*y/r^3',
+            spring: 'fx=-k*x-c*vx, fy=-k*y-c*vy',
+            cubic: 'fx=-x^3, fy=-y^3',
+          }[payload.model] || payload.model);
+      const rowId = `log-row-${Date.now()}`;
+      const toggleId = `toggle-${rowId}`;
+      const infoRowId = `info-${rowId}`;
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="border:1px solid #ccc; padding:6px;">${payload.x0}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.y0}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.vx}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.vy}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.dt}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.steps}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${payload.model}</td>
+        <td style="border:1px solid #ccc; padding:6px;">${a.toFixed(3)}</td>
+        <td style="border:1px solid #ccc; padding:6px;"><input type="number" step="any" value="${tValue !== null ? tValue.toFixed(3) : ''}" style="width:100px;" id="period-${rowId}"></td>
+        <td style="border:1px solid #ccc; padding:6px;" id="ratio-${rowId}">${aCubedOverT2 !== null ? aCubedOverT2.toFixed(3) : '未計算'}</td>
+        <td style="border:1px solid #ccc; padding:6px;"><button type="button" id="${toggleId}">関数形</button></td>
+      `;
+      const infoRow = document.createElement('tr');
+      infoRow.id = infoRowId;
+      infoRow.style.display = 'none';
+      infoRow.innerHTML = `
+        <td style="border:1px solid #ccc; padding:6px; font-weight:600;" colspan="11">${functionForm}</td>
+      `;
+      logTableBody.appendChild(row);
+      logTableBody.appendChild(infoRow);
+      document.getElementById(toggleId).addEventListener('click', () => {
+        infoRow.style.display = infoRow.style.display === 'none' ? '' : 'none';
+      });
+      const periodInput = document.getElementById(`period-${rowId}`);
+      const ratioCell = document.getElementById(`ratio-${rowId}`);
+      periodInput.addEventListener('input', () => {
+        const value = parseFloat(periodInput.value);
+        if (!isNaN(value) && value > 0) {
+          const ratio = a ** 3 / (value ** 2);
+          ratioCell.textContent = ratio.toFixed(3);
+        } else {
+          ratioCell.textContent = '未計算';
+        }
+      });
+    }
+
+    function drawArealVelocityPlot(points) {
+      const padding = 50;
+      const width = areaCanvas.width;
+      const height = areaCanvas.height;
+      const tValues = points.map(p => p.t);
+      const omegaValues = points.map(p => 0.5 * (p.x * p.vy - p.y * p.vx));
+      let [tMin, tMax] = clampRange(Math.min(...tValues), Math.max(...tValues));
+      let [omegaMin, omegaMax] = clampRange(Math.min(...omegaValues), Math.max(...omegaValues));
+      if (tMax - tMin === 0) {
+        tMax += 1;
+        tMin -= 1;
+      }
+      const omegaMeanAbs = Math.abs(omegaValues.reduce((sum, value) => sum + value, 0) / omegaValues.length);
+      const desiredHalfRange = Math.max(1e-3, omegaMeanAbs * 0.02);
+      const currentRange = omegaMax - omegaMin;
+      if (currentRange < desiredHalfRange * 2) {
+        const omegaMeanValue = omegaValues.reduce((sum, value) => sum + value, 0) / omegaValues.length;
+        omegaMin = omegaMeanValue - desiredHalfRange;
+        omegaMax = omegaMeanValue + desiredHalfRange;
+      }
+      const scaleX = (width - padding * 2) / (tMax - tMin);
+      const scaleY = (height - padding * 2) / (omegaMax - omegaMin);
+
+      areaCtx.clearRect(0, 0, width, height);
+      areaCtx.fillStyle = '#fff';
+      areaCtx.fillRect(0, 0, width, height);
+      drawGrid(areaCtx, width, height, tMin, tMax, omegaMin, omegaMax, 10, padding);
+      drawAxes(areaCtx, width, height, tMin, tMax, omegaMin, omegaMax, 't', 'area velocity', padding);
+
+      areaCtx.strokeStyle = '#2a9d8f';
+      areaCtx.lineWidth = 2;
+      areaCtx.beginPath();
+      points.forEach((point, index) => {
+        const x = padding + (point.t - tMin) * scaleX;
+        const y = height - padding - (0.5 * (point.x * point.vy - point.y * point.vx) - omegaMin) * scaleY;
+        if (index === 0) {
+          areaCtx.moveTo(x, y);
+        } else {
+          areaCtx.lineTo(x, y);
+        }
+      });
+      areaCtx.stroke();
+
+      const zeroValue = 0;
+      if (omegaMin <= zeroValue && zeroValue <= omegaMax) {
+        const zeroY = height - padding - (zeroValue - omegaMin) * scaleY;
+        areaCtx.strokeStyle = '#888';
+        areaCtx.setLineDash([4, 4]);
+        areaCtx.beginPath();
+        areaCtx.moveTo(padding, zeroY);
+        areaCtx.lineTo(width - padding, zeroY);
+        areaCtx.stroke();
+        areaCtx.setLineDash([]);
+      }
+    }
+
+    const downloadButton = document.getElementById('download-button');
+
+    modelSelect.addEventListener('change', updateModelUI);
+    updateModelUI();
+
+    function collectFormPayload() {
+      const formData = new FormData(form);
+      const payload = {};
+      for (const [key, value] of formData.entries()) {
+        payload[key] = value;
+      }
+      return payload;
+    }
+
+    async function downloadExcel() {
+      downloadButton.disabled = true;
+      const originalText = downloadButton.textContent;
+      downloadButton.textContent = 'ダウンロード中...';
+      try {
+        const payload = collectFormPayload();
+        const res = await fetch('https://cgi.u.tsukuba.ac.jp/~s2312682/local_only/download.cgi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          let errorText = await res.text();
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            errorText = data.error || errorText;
+          }
+          throw new Error(errorText || `HTTP ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Result.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(error);
+        alert('Excel ダウンロードに失敗しました。\n' + (error.message || String(error)));
+      } finally {
+        downloadButton.disabled = false;
+        downloadButton.textContent = originalText;
+      }
+    }
+
+    downloadButton.addEventListener('click', downloadExcel);
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const payload = {};
+      for (const [key, value] of formData.entries()) {
+        payload[key] = value;
+      }
+
+      try {
+        const res = await fetch('https://cgi.u.tsukuba.ac.jp/~s2312682/local_only/simulate.cgi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        let data;
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+          if (!res.ok) {
+            const message = data.error || 'サーバーエラーが発生しました。';
+            const detail = data.details ? `\n詳細: ${data.details}` : '';
+            throw new Error(`${message}${detail}`);
+          }
+        } else {
+          const text = await res.text();
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${text}`);
+          }
+          data = text;
+        }
+
+        if (!Array.isArray(data)) {
+          throw new Error('受信データの形式が不正です。');
+        }
+        latestPayload = payload;
+        drawTrajectory(data);
+      } catch (error) {
+        console.error(error);
+        alert('エラーが発生しました。\n' + (error.message || String(error)));
+      }
+    });
+
+    // 初回実行
+    form.dispatchEvent(new Event('submit'));
+  </script>
+</body>
+</html>
