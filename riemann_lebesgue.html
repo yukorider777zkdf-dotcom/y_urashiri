@@ -138,12 +138,16 @@
   <div class="proof-box">
     <div class="label">証明の概略</div>
     <p>
-      $(\Rightarrow)$ $f$ がリーマン積分可能とする。
-      任意の $\varepsilon > 0$ に対して、ある分割 $P$ が存在して
-      $U(f, P) - L(f, P) < \varepsilon$。
-      振動度 $\omega_k = M_k - m_k > \varepsilon/2$ となる小区間の幅の総和は
-      $$\sum_{k:\,\omega_k > \varepsilon/2} \Delta x_k < 2$$
-      と評価でき（詳細は省略）、$\varepsilon \to 0$ とすることで $\mu(D) = 0$ が示せる。
+      $(\Rightarrow)$ $f$ がリーマン積分可能とする。任意の $\alpha > 0, \varepsilon > 0$ を固定する。
+      リーマン積分可能性より $U(f, P) - L(f, P) < \alpha\varepsilon$ を満たす分割 $P$ が存在する。
+      振動度 $\omega_k = M_k - m_k \ge \alpha$ となる小区間について
+      $$\alpha \sum_{k:\,\omega_k \ge \alpha} \Delta x_k
+        \;\le\; \sum_k \omega_k \,\Delta x_k = U(f,P) - L(f,P) < \alpha\varepsilon,$$
+      したがって
+      $$\sum_{k:\,\omega_k \ge \alpha} \Delta x_k < \varepsilon.$$
+      $\varepsilon > 0$ は任意なので、$x$ での振動度が $\alpha$ 以上となる点の集合
+      $D_\alpha = \{x \in [a,b] : \omega(f,x) \ge \alpha\}$ はルベーグ測度ゼロで被覆できる。
+      $D = \bigcup_{n=1}^\infty D_{1/n}$ と書けるので $\mu(D) = 0$。
     </p>
     <p>
       $(\Leftarrow)$ $\mu(D) = 0$ とする。
