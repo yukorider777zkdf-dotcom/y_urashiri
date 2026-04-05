@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>リーマン積分とルベーグ積分の一致</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px auto; max-width: 820px; line-height: 1.8; color: #222; }
+    h1 { font-size: 1.6rem; border-bottom: 2px solid #555; padding-bottom: 8px; }
+    h2 { font-size: 1.2rem; margin-top: 2em; border-left: 4px solid #888; padding-left: 10px; }
+    .theorem-box {
+      border: 1px solid #666; background: #f4f4f4; padding: 16px 20px;
+      margin: 1.5em 0; border-radius: 4px;
+    }
+    .theorem-box .label { font-weight: bold; margin-bottom: 6px; }
+    .proof-box {
+      border-left: 3px solid #aaa; padding: 10px 16px; margin: 1.2em 0;
+      background: #fafafa;
+    }
+    .proof-box .label { font-style: italic; color: #555; margin-bottom: 6px; }
+    .qed { text-align: right; font-size: 1.2rem; margin-top: 0.5em; }
+    a { color: #0066cc; }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+  <p><a href="index.html">← シミュレーションに戻る</a></p>
+
+  <h1>リーマン積分とルベーグ積分の値が一致することの証明</h1>
+
+  <p>
+    本ページでは、有界閉区間上でリーマン積分可能な関数について、
+    リーマン積分とルベーグ積分の値が一致することを証明する。
+  </p>
+
+  <h2>1. 準備：記号と定義</h2>
+  <p>
+    $[a, b]$ を有界閉区間とし、$f : [a, b] \to \mathbb{R}$ を有界関数とする。
+  </p>
+  <p>
+    <strong>分割 (partition)</strong>：
+    $a = x_0 < x_1 < \cdots < x_n = b$ を $[a,b]$ の分割 $P$ と呼ぶ。
+    各小区間を $I_k = [x_{k-1}, x_k]$、幅を $\Delta x_k = x_k - x_{k-1}$ とおく。
+  </p>
+  <p>
+    <strong>上リーマン和・下リーマン和</strong>：
+    $$M_k = \sup_{x \in I_k} f(x), \quad m_k = \inf_{x \in I_k} f(x)$$
+    $$U(f, P) = \sum_{k=1}^n M_k \,\Delta x_k, \qquad L(f, P) = \sum_{k=1}^n m_k \,\Delta x_k.$$
+  </p>
+  <p>
+    <strong>リーマン積分可能</strong>：
+    $$\inf_P U(f,P) = \sup_P L(f,P) =: \int_a^b f(x)\,dx \quad (\text{リーマン})$$
+    が成り立つとき、$f$ は $[a,b]$ 上でリーマン積分可能という。
+  </p>
+  <p>
+    <strong>ルベーグ積分</strong>：
+    $f$ が $[a,b]$ 上でルベーグ可積分であるとき、その積分を
+    $\int_{[a,b]} f\,d\mu$ と書く（$\mu$ はルベーグ測度）。
+  </p>
+
+  <h2>2. 主定理</h2>
+  <div class="theorem-box">
+    <div class="label">定理（リーマン積分とルベーグ積分の一致）</div>
+    <p>
+      $f : [a,b] \to \mathbb{R}$ が有界かつリーマン積分可能ならば、
+      $f$ はルベーグ可積分であり、
+      $$\int_a^b f(x)\,dx = \int_{[a,b]} f\,d\mu$$
+      が成り立つ。
+    </p>
+  </div>
+
+  <h2>3. 補題（ルベーグの基準）</h2>
+  <div class="theorem-box">
+    <div class="label">補題（Lebesgue の可積分条件）</div>
+    <p>
+      有界関数 $f : [a,b] \to \mathbb{R}$ がリーマン積分可能であることの必要十分条件は、
+      $f$ の不連続点の集合 $D$ のルベーグ測度がゼロ、すなわち $\mu(D) = 0$ であることである。
+    </p>
+  </div>
+  <p>この補題は本証明で重要な役割を果たす。証明は後述（§5）する。</p>
+
+  <h2>4. 主定理の証明</h2>
+  <div class="proof-box">
+    <div class="label">証明</div>
+
+    <p>
+      <strong>Step 1：上関数・下関数の構成。</strong><br>
+      分割の列 $P_1 \subset P_2 \subset \cdots$（各 $P_n$ の幅 $\|P_n\| \to 0$）を取る。
+      各 $n$ に対して
+      $$\overline{f}_n(x) = M_k^{(n)} \quad (x \in I_k^{(n)})$$
+      $$\underline{f}_n(x) = m_k^{(n)} \quad (x \in I_k^{(n)})$$
+      と定める（端点は適宜定める）。
+      $\overline{f}_n$ は上リーマン和、$\underline{f}_n$ は下リーマン和に対応する。
+    </p>
+
+    <p>
+      <strong>Step 2：単調収束。</strong><br>
+      分割を細分化するごとに上和は単調減少、下和は単調増加するから、
+      $$\overline{f}_1 \ge \overline{f}_2 \ge \cdots \ge f \ge \cdots \ge \underline{f}_2 \ge \underline{f}_1.$$
+      したがって各点極限
+      $$\overline{f}(x) = \lim_{n \to \infty} \overline{f}_n(x), \qquad \underline{f}(x) = \lim_{n \to \infty} \underline{f}_n(x)$$
+      が存在する。
+    </p>
+
+    <p>
+      <strong>Step 3：極限関数の同一性。</strong><br>
+      $f$ がリーマン積分可能であるため、補題より $\mu(D) = 0$。
+      連続点 $x \notin D$ では、任意の $\varepsilon > 0$ に対して十分細かい分割で
+      $M_k - m_k < \varepsilon$ が達成できるから
+      $$\overline{f}(x) = f(x) = \underline{f}(x) \quad \text{a.e. on } [a,b].$$
+    </p>
+
+    <p>
+      <strong>Step 4：ルベーグ積分の収束。</strong><br>
+      $f$ は有界なので、ある $M > 0$ で $|f| \le M$。
+      単調収束定理（あるいは有界収束定理）を適用すると
+      $$\int_{[a,b]} \overline{f}_n \, d\mu = U(f, P_n) \xrightarrow{n\to\infty} \inf_P U(f, P) = \int_a^b f\,dx$$
+      $$\int_{[a,b]} \underline{f}_n \, d\mu = L(f, P_n) \xrightarrow{n\to\infty} \sup_P L(f, P) = \int_a^b f\,dx.$$
+      （階段関数のルベーグ積分はリーマン和と一致することに注意。）
+    </p>
+
+    <p>
+      <strong>Step 5：挟み撃ちによる結論。</strong><br>
+      Step 3 より $\overline{f} = f = \underline{f}$ a.e.、Step 4 より両者の積分の共通極限は
+      リーマン積分値に等しい。したがって
+      $$\int_{[a,b]} f \, d\mu = \int_a^b f(x)\,dx.$$
+    </p>
+
+    <div class="qed">$\blacksquare$</div>
+  </div>
+
+  <h2>5. 補題（ルベーグの基準）の証明の概略</h2>
+  <div class="proof-box">
+    <div class="label">証明の概略</div>
+    <p>
+      $(\Rightarrow)$ $f$ がリーマン積分可能とする。
+      任意の $\varepsilon > 0$ に対して、ある分割 $P$ が存在して
+      $U(f, P) - L(f, P) < \varepsilon$。
+      振動度 $\omega_k = M_k - m_k > \varepsilon/2$ となる小区間の幅の総和は
+      $$\sum_{k:\,\omega_k > \varepsilon/2} \Delta x_k < 2$$
+      と評価でき（詳細は省略）、$\varepsilon \to 0$ とすることで $\mu(D) = 0$ が示せる。
+    </p>
+    <p>
+      $(\Leftarrow)$ $\mu(D) = 0$ とする。
+      $f$ は有界なので任意の $\varepsilon > 0$ に対して、
+      連続点の集合はコンパクト集合で被覆でき、
+      一様連続性を使って $U(f, P) - L(f, P) < \varepsilon$ を達成する分割が取れる。
+      したがって $f$ はリーマン積分可能。
+    </p>
+    <div class="qed">$\blacksquare$</div>
+  </div>
+
+  <h2>6. まとめ</h2>
+  <p>
+    以上の議論により、有界閉区間上でリーマン積分可能な関数はルベーグ可積分でもあり、
+    両積分の値は一致することが示された。
+    すなわち、リーマン積分論の結果はすべてルベーグ積分論の特殊ケースとして取り込まれる。
+    逆に、ルベーグ可積分であってもリーマン積分可能とは限らない
+    （例：$[0,1]$ 上のディリクレ関数）ため、
+    ルベーグ積分はリーマン積分の真の拡張となっている。
+  </p>
+
+  <h2>7. 参考文献</h2>
+  <ul>
+    <li>W. Rudin, <em>Real and Complex Analysis</em>, 3rd ed., McGraw-Hill, 1987.</li>
+    <li>H. L. Royden &amp; P. M. Fitzpatrick, <em>Real Analysis</em>, 4th ed., Pearson, 2010.</li>
+    <li>伊藤清三, 『ルベーグ積分入門』, 裳華房, 1963.</li>
+  </ul>
+</body>
+</html>
