@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>解析学まとめサイト</title>
+  <!-- MathJax for mathematical notation -->
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        packages: {'[+]': ['ams']}
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+  <style>
+    :root {
+      --primary: #2c5f8a;
+      --accent:  #e67e22;
+      --bg:      #f4f7fa;
+      --card-bg: #ffffff;
+      --border:  #d0d8e4;
+      --text:    #2d3436;
+      --muted:   #636e72;
+      --proof-bg:#eef4fb;
+      --theorem-bg:#fff8e1;
+      --definition-bg:#e8f5e9;
+      --corollary-bg:#fce4ec;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 2rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; letter-spacing: .05em; }
+    header p  { margin-top: .5rem; color: #b8d0e8; font-size: .95rem; }
+
+    /* ── Navigation ── */
+    nav {
+      background: #1a4068;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .25rem;
+      padding: .5rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav a {
+      color: #c8dff0;
+      text-decoration: none;
+      padding: .35rem .8rem;
+      border-radius: 4px;
+      font-size: .88rem;
+      transition: background .2s;
+    }
+    nav a:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+    }
+
+    /* ── Section ── */
+    .section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.8rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,.06);
+    }
+    .section h2 {
+      font-size: 1.4rem;
+      color: var(--primary);
+      border-bottom: 3px solid var(--accent);
+      padding-bottom: .45rem;
+      margin-bottom: 1.2rem;
+    }
+    .section h3 {
+      font-size: 1.1rem;
+      color: #1a4068;
+      margin: 1.2rem 0 .5rem;
+    }
+    .section p  { margin-bottom: .85rem; }
+    .section ul, .section ol {
+      margin: .5rem 0 .85rem 1.5rem;
+    }
+    .section li { margin-bottom: .4rem; }
+
+    /* ── Callout boxes ── */
+    .box {
+      border-left: 5px solid var(--primary);
+      border-radius: 0 6px 6px 0;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+    }
+    .box.definition { background: var(--definition-bg); border-color: #2e7d32; }
+    .box.theorem    { background: var(--theorem-bg);    border-color: #f9a825; }
+    .box.lemma      { background: #e3f2fd;              border-color: #1565c0; }
+    .box.corollary  { background: var(--corollary-bg);  border-color: #c62828; }
+    .box.remark     { background: #f3e5f5;              border-color: #7b1fa2; }
+    .box .box-title {
+      font-weight: bold;
+      font-size: .9rem;
+      letter-spacing: .04em;
+      margin-bottom: .4rem;
+      text-transform: uppercase;
+    }
+    .box.definition .box-title { color: #2e7d32; }
+    .box.theorem    .box-title { color: #f57f17; }
+    .box.lemma      .box-title { color: #1565c0; }
+    .box.corollary  .box-title { color: #c62828; }
+    .box.remark     .box-title { color: #7b1fa2; }
+
+    /* ── Proof ── */
+    .proof {
+      background: var(--proof-bg);
+      border: 1px dashed #90b8d8;
+      border-radius: 6px;
+      padding: 1rem 1.3rem;
+      margin: .8rem 0;
+    }
+    .proof .proof-label {
+      font-style: italic;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: .5rem;
+    }
+    .proof .qed {
+      text-align: right;
+      font-size: 1.1rem;
+      margin-top: .5rem;
+      color: var(--muted);
+    }
+
+    /* ── Step list inside proof ── */
+    .step-list { counter-reset: step; list-style: none; margin-left: 0; }
+    .step-list li {
+      counter-increment: step;
+      padding-left: 2.2rem;
+      position: relative;
+      margin-bottom: .7rem;
+    }
+    .step-list li::before {
+      content: "Step " counter(step);
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+      color: var(--primary);
+      font-size: .82rem;
+      top: .05rem;
+    }
+
+    /* ── Table ── */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .93rem;
+      margin: .8rem 0;
+    }
+    .info-table th, .info-table td {
+      border: 1px solid var(--border);
+      padding: .55rem .8rem;
+    }
+    .info-table th {
+      background: #e8eef5;
+      color: var(--primary);
+      font-weight: bold;
+    }
+    .info-table tr:nth-child(even) td { background: #f9fbfd; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: .85rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.4rem; }
+      .section  { padding: 1.2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📐 解析学まとめサイト</h1>
+  <p>数列・極限・連続・微積分の基礎から、ガウス数列（AGM）の収束証明まで</p>
+</header>
+
+<nav>
+  <a href="#basics">数列の基礎</a>
+  <a href="#convergence">収束の定義</a>
+  <a href="#gaussian">ガウス数列</a>
+  <a href="#proof">収束の証明</a>
+  <a href="#agm">AGM の応用</a>
+  <a href="#continuity">連続と微分</a>
+  <a href="#integral">積分</a>
+  <a href="#references">参考</a>
+</nav>
+
+<main>
+
+  <!-- ──────────────────────────────── 1. 数列の基礎 ──────────────────────────────── -->
+  <section class="section" id="basics">
+    <h2>1. 数列の基礎</h2>
+
+    <div class="box definition">
+      <div class="box-title">定義 1.1 — 数列</div>
+      <p>自然数全体 $\mathbb{N}$ を定義域とする写像 $a:\mathbb{N}\to\mathbb{R}$（あるいは $\mathbb{C}$）を
+         <strong>実数列</strong>（複素数列）という。通常 $a(n)$ を $a_n$ と書き、数列全体を $\{a_n\}_{n=1}^{\infty}$ と表す。</p>
+    </div>
+
+    <h3>単調数列</h3>
+    <table class="info-table">
+      <thead><tr><th>名称</th><th>条件</th></tr></thead>
+      <tbody>
+        <tr><td>単調増加</td><td>$a_n \le a_{n+1} \quad \forall n$</td></tr>
+        <tr><td>（狭義）単調増加</td><td>$a_n < a_{n+1} \quad \forall n$</td></tr>
+        <tr><td>単調減少</td><td>$a_n \ge a_{n+1} \quad \forall n$</td></tr>
+        <tr><td>（狭義）単調減少</td><td>$a_n > a_{n+1} \quad \forall n$</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box theorem">
+      <div class="box-title">定理 1.2 — 単調収束定理</div>
+      <p>単調増加かつ上に有界な数列、または単調減少かつ下に有界な数列は収束する。</p>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────── 2. 収束の定義 ──────────────────────────────── -->
+  <section class="section" id="convergence">
+    <h2>2. 収束の定義（ε-N 論法）</h2>
+
+    <div class="box definition">
+      <div class="box-title">定義 2.1 — 数列の収束</div>
+      <p>数列 $\{a_n\}$ が $\alpha \in \mathbb{R}$ に<strong>収束する</strong>とは、</p>
+      $$\forall \varepsilon > 0,\; \exists N \in \mathbb{N} \;\text{s.t.}\; n > N \Rightarrow |a_n - \alpha| < \varepsilon$$
+      <p>が成立することをいう。このとき $\displaystyle\lim_{n\to\infty} a_n = \alpha$ と書く。</p>
+    </div>
+
+    <div class="box theorem">
+      <div class="box-title">定理 2.2 — コーシー列の収束</div>
+      <p>実数列（あるいはバナッハ空間内の列）が<strong>コーシー列</strong>、すなわち</p>
+      $$\forall \varepsilon > 0,\; \exists N \;\text{s.t.}\; m,n > N \Rightarrow |a_m - a_n| < \varepsilon$$
+      <p>を満たすならば収束する（実数の完備性）。</p>
+    </div>
+
+    <h3>収束に関する基本性質</h3>
+    <ul>
+      <li>極限の一意性：$\lim a_n = \alpha$ かつ $\lim a_n = \beta$ ならば $\alpha = \beta$。</li>
+      <li>収束列は有界：$\{a_n\}$ が収束すれば $\exists M > 0$ s.t. $|a_n| \le M$ $(\forall n)$。</li>
+      <li>挟み撃ち定理：$b_n \le a_n \le c_n$ かつ $\lim b_n = \lim c_n = L$ ならば $\lim a_n = L$。</li>
+    </ul>
+  </section>
+
+  <!-- ──────────────────────────────── 3. ガウス数列 ──────────────────────────────── -->
+  <section class="section" id="gaussian">
+    <h2>3. ガウス数列（算術幾何平均列）</h2>
+
+    <p>
+      ガウス数列（Gauss sequence）とは、C. F. Gauss が楕円積分の研究で導入した
+      <strong>算術幾何平均（Arithmetic-Geometric Mean; AGM）</strong>を定義する数列のことである。
+    </p>
+
+    <div class="box definition">
+      <div class="box-title">定義 3.1 — ガウス数列（AGM 数列）</div>
+      <p>実数 $a_0 \ge b_0 > 0$ を与える。以下の漸化式で定まる二つの数列
+         $\{a_n\}$, $\{b_n\}$ を<strong>ガウス数列</strong>という：</p>
+      $$a_{n+1} = \frac{a_n + b_n}{2}, \qquad b_{n+1} = \sqrt{a_n b_n}$$
+      <p>共通の収束先を $M(a_0, b_0)$ と書き、<strong>算術幾何平均</strong>という。</p>
+    </div>
+
+    <h3>直感的なイメージ</h3>
+    <p>
+      算術平均 $A = \frac{a+b}{2}$ と幾何平均 $G = \sqrt{ab}$ を交互に適用すると、
+      二つの値が急速に互いに近づく。以下は $a_0=1,\, b_0 = 1/\sqrt{2}$ の場合の数値例：
+    </p>
+
+    <table class="info-table">
+      <thead>
+        <tr><th>$n$</th><th>$a_n$（算術平均列）</th><th>$b_n$（幾何平均列）</th><th>$a_n - b_n$</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>1.000000000</td><td>0.707106781</td><td>2.93 × 10⁻¹</td></tr>
+        <tr><td>1</td><td>0.853553391</td><td>0.840896415</td><td>1.27 × 10⁻²</td></tr>
+        <tr><td>2</td><td>0.847224903</td><td>0.847213085</td><td>1.18 × 10⁻⁵</td></tr>
+        <tr><td>3</td><td>0.847213994</td><td>0.847213994</td><td>< 10⁻⁹</td></tr>
+        <tr><td>4</td><td>0.847213994</td><td>0.847213994</td><td>≈ 0 (機械精度)</td></tr>
+      </tbody>
+    </table>
+
+    <p>収束速度は<strong>2次収束（quadratic convergence）</strong>と呼ばれ、
+       誤差が毎ステップほぼ 2 乗されるほど急速である。</p>
+  </section>
+
+  <!-- ──────────────────────────────── 4. 収束証明 ──────────────────────────────── -->
+  <section class="section" id="proof">
+    <h2>4. ガウス数列の収束証明</h2>
+
+    <p>以下では $a_0 \ge b_0 > 0$ を仮定する（$a_0 = b_0$ のとき自明に収束するので除く）。</p>
+
+    <!-- Lemma 1 -->
+    <div class="box lemma">
+      <div class="box-title">補題 4.1 — AM-GM 不等式</div>
+      <p>正実数 $x, y > 0$ に対して</p>
+      $$\frac{x+y}{2} \ge \sqrt{xy}$$
+      <p>等号成立は $x = y$ のときに限る。</p>
+    </div>
+
+    <div class="proof">
+      <div class="proof-label">証明（補題 4.1）</div>
+      <p>$(\sqrt{x} - \sqrt{y})^2 \ge 0$ を展開すると $x - 2\sqrt{xy} + y \ge 0$。
+         整理して $\dfrac{x+y}{2} \ge \sqrt{xy}$。等号は $\sqrt{x}=\sqrt{y}$、
+         すなわち $x=y$ のとき。$\square$</p>
+      <div class="qed">□</div>
+    </div>
+
+    <!-- Lemma 2 -->
+    <div class="box lemma">
+      <div class="box-title">補題 4.2 — $b_n \le b_{n+1} \le a_{n+1} \le a_n$（挟み込み）</div>
+      <p>すべての $n \ge 0$ に対して $b_n \le b_{n+1} \le a_{n+1} \le a_n$ が成立する。</p>
+    </div>
+
+    <div class="proof">
+      <div class="proof-label">証明（補題 4.2）</div>
+      <ol class="step-list">
+        <li>
+          <strong>$a_{n+1} \le a_n$</strong>（$\{a_n\}$ は単調減少）：
+          補題 4.1 より $a_{n+1} = \dfrac{a_n + b_n}{2} \le \dfrac{a_n + a_n}{2} = a_n$。
+        </li>
+        <li>
+          <strong>$b_n \le b_{n+1}$</strong>（$\{b_n\}$ は単調増加）：
+          $b_{n+1} = \sqrt{a_n b_n} \ge \sqrt{b_n b_n} = b_n$（$a_n \ge b_n$ を利用）。
+        </li>
+        <li>
+          <strong>$b_{n+1} \le a_{n+1}$</strong>：
+          補題 4.1 を $a_n, b_n$ に適用すると $a_{n+1} = \dfrac{a_n+b_n}{2} \ge \sqrt{a_n b_n} = b_{n+1}$。
+        </li>
+      </ol>
+      <p>以上を合わせると $b_n \le b_{n+1} \le a_{n+1} \le a_n$。$\square$</p>
+      <div class="qed">□</div>
+    </div>
+
+    <!-- Main Theorem -->
+    <div class="box theorem">
+      <div class="box-title">定理 4.3 — ガウス数列の収束</div>
+      <p>$a_0 \ge b_0 > 0$ とする。ガウス数列 $\{a_n\},\{b_n\}$ はともに同一の正の値
+         $M = M(a_0, b_0)$ に収束する：</p>
+      $$\lim_{n\to\infty} a_n = \lim_{n\to\infty} b_n = M(a_0, b_0)$$
+    </div>
+
+    <div class="proof">
+      <div class="proof-label">証明（定理 4.3）</div>
+      <ol class="step-list">
+        <li>
+          <strong>有界性の確認。</strong>
+          補題 4.2 より、任意の $n$ に対して
+          $$b_0 \le b_1 \le \cdots \le b_n \le a_n \le \cdots \le a_1 \le a_0$$
+          が成立する。したがって $\{a_n\}$ は $b_0 > 0$ を下界に持ち、
+          $\{b_n\}$ は $a_0$ を上界に持つ。
+        </li>
+        <li>
+          <strong>単調収束定理の適用。</strong>
+          $\{a_n\}$ は単調減少かつ下に有界（$\ge b_0 > 0$）なので、
+          単調収束定理（定理 1.2）より収束する；その極限を $\alpha$ とする。
+          同様に $\{b_n\}$ は単調増加かつ上に有界（$\le a_0$）なので収束する；
+          その極限を $\beta$ とする。
+        </li>
+        <li>
+          <strong>極限の一致の証明。</strong>
+          漸化式の両辺で $n \to \infty$ の極限を取ると
+          $$\alpha = \lim_{n\to\infty} a_{n+1} = \lim_{n\to\infty} \frac{a_n + b_n}{2} = \frac{\alpha + \beta}{2}$$
+          よって $2\alpha = \alpha + \beta$、すなわち $\alpha = \beta =: M$。
+        </li>
+        <li>
+          <strong>正値性の確認。</strong>
+          $M = \lim b_n \ge b_0 > 0$。
+        </li>
+      </ol>
+      <p>以上より $\displaystyle\lim_{n\to\infty} a_n = \lim_{n\to\infty} b_n = M(a_0, b_0) > 0$。$\square$</p>
+      <div class="qed">□</div>
+    </div>
+
+    <!-- Corollary: convergence speed -->
+    <div class="box corollary">
+      <div class="box-title">系 4.4 — 2次収束（収束の速さ）</div>
+      <p>誤差 $\varepsilon_n := a_n - b_n$ は次の不等式を満たす：</p>
+      $$0 \le \varepsilon_{n+1} \le \frac{\varepsilon_n^2}{8 b_0}$$
+      <p>したがって誤差は超指数的に（2次のオーダーで）$0$ に収束する。</p>
+    </div>
+
+    <div class="proof">
+      <div class="proof-label">証明（系 4.4）</div>
+      <p>算術平均・幾何平均の差を計算する：</p>
+      $$\varepsilon_{n+1} = a_{n+1} - b_{n+1}
+        = \frac{a_n + b_n}{2} - \sqrt{a_n b_n}
+        = \frac{(\sqrt{a_n} - \sqrt{b_n})^2}{2}$$
+      <p>$\sqrt{a_n} - \sqrt{b_n} = \dfrac{a_n - b_n}{\sqrt{a_n} + \sqrt{b_n}}
+         \le \dfrac{\varepsilon_n}{2\sqrt{b_0}}$ なので（$b_n \ge b_0$ を利用）</p>
+      $$\varepsilon_{n+1}
+        \le \frac{1}{2}\left(\frac{\varepsilon_n}{2\sqrt{b_0}}\right)^2
+        = \frac{\varepsilon_n^2}{8 b_0}$$
+      <div class="qed">□</div>
+    </div>
+
+    <div class="box remark">
+      <div class="box-title">注意</div>
+      <p>
+        2次収束は非常に速い収束率を意味する。例えば初期誤差 $\varepsilon_0 = 0.3$、
+        $b_0 = 0.7$ のとき、$\varepsilon_1 \lesssim 0.004$、$\varepsilon_2 \lesssim 10^{-5}$、
+        $\varepsilon_3 \lesssim 10^{-10}$、…と正確な桁数がほぼ 2 倍ずつ増加する。
+        これが AGM が計算機科学での高精度計算（$\pi$ の計算など）に広く使われる理由である。
+      </p>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────── 5. AGM の応用 ──────────────────────────────── -->
+  <section class="section" id="agm">
+    <h2>5. AGM の応用</h2>
+
+    <h3>5.1 楕円積分との関係</h3>
+    <p>
+      ガウスが AGM を発見した動機は、第 1 種完全楕円積分
+      $K(k) = \displaystyle\int_0^{\pi/2} \frac{d\theta}{\sqrt{1 - k^2 \sin^2\theta}}$
+      の計算であった。
+    </p>
+    <div class="box theorem">
+      <div class="box-title">定理 5.1 — Gauss の公式</div>
+      <p>$0 < k < 1$ に対して $k' = \sqrt{1 - k^2}$ とおく。$a_0 = 1,\; b_0 = k'$ として
+         AGM 数列を構成すると</p>
+      $$K(k) = \frac{\pi}{2\, M(1, k')}$$
+    </div>
+    <p>
+      この公式を用いると、有限回の算術・幾何平均演算だけで $K(k)$ を
+      任意精度で計算できる。
+    </p>
+
+    <h3>5.2 円周率 $\pi$ の高速計算</h3>
+    <p>
+      Brent–Salamin アルゴリズム（1976）は AGM に基づく $\pi$ の計算法であり、
+      各ステップで正確な桁数がほぼ 2 倍になる：
+    </p>
+    <p>$a_0 = 1,\; b_0 = \dfrac{1}{\sqrt{2}},\; t_0 = \dfrac{1}{4},\; p_0 = 1$ として</p>
+    $$a_{n+1} = \frac{a_n + b_n}{2}, \quad
+      b_{n+1} = \sqrt{a_n b_n}, \quad
+      t_{n+1} = t_n - p_n(a_n - a_{n+1})^2, \quad
+      p_{n+1} = 2p_n$$
+    $$\pi \approx \frac{(a_n + b_n)^2}{4 t_n}$$
+
+    <h3>5.3 その他の関連公式</h3>
+    <ul>
+      <li>第 2 種完全楕円積分 $E(k)$ もまた AGM を通じて計算可能。</li>
+      <li>対数の超高速計算（Borwein の $\pi$ アルゴリズム群）。</li>
+      <li>楕円曲線上のペアリング計算（暗号への応用）。</li>
+    </ul>
+  </section>
+
+  <!-- ──────────────────────────────── 6. 連続と微分 ──────────────────────────────── -->
+  <section class="section" id="continuity">
+    <h2>6. 連続と微分（解析の基礎）</h2>
+
+    <div class="box definition">
+      <div class="box-title">定義 6.1 — 連続性</div>
+      <p>関数 $f: \mathbb{R} \to \mathbb{R}$ が点 $c$ で<strong>連続</strong>であるとは</p>
+      $$\forall \varepsilon > 0,\; \exists \delta > 0 \;\text{s.t.}\; |x - c| < \delta \Rightarrow |f(x) - f(c)| < \varepsilon$$
+    </div>
+
+    <div class="box theorem">
+      <div class="box-title">定理 6.2 — 中間値定理</div>
+      <p>$f$ が閉区間 $[a, b]$ 上で連続で $f(a) \ne f(b)$ ならば、
+         $f(a)$ と $f(b)$ の間の任意の値 $y$ に対して
+         $f(c) = y$ となる $c \in (a, b)$ が存在する。</p>
+    </div>
+
+    <div class="box definition">
+      <div class="box-title">定義 6.3 — 微分可能性</div>
+      <p>点 $c$ における微分係数（導関数の値）を</p>
+      $$f'(c) = \lim_{h \to 0} \frac{f(c+h) - f(c)}{h}$$
+      <p>と定義する。この極限が存在するとき $f$ は $c$ で<strong>微分可能</strong>という。</p>
+    </div>
+
+    <div class="box theorem">
+      <div class="box-title">定理 6.4 — 平均値定理</div>
+      <p>$f$ が $[a,b]$ 上連続かつ $(a,b)$ 上微分可能ならば</p>
+      $$\exists c \in (a, b) \;\text{s.t.}\; f'(c) = \frac{f(b) - f(a)}{b - a}$$
+    </div>
+
+    <h3>主要な微分公式</h3>
+    <table class="info-table">
+      <thead><tr><th>関数 $f(x)$</th><th>導関数 $f'(x)$</th></tr></thead>
+      <tbody>
+        <tr><td>$x^n$</td><td>$nx^{n-1}$</td></tr>
+        <tr><td>$e^x$</td><td>$e^x$</td></tr>
+        <tr><td>$\ln x$</td><td>$\dfrac{1}{x}$</td></tr>
+        <tr><td>$\sin x$</td><td>$\cos x$</td></tr>
+        <tr><td>$\cos x$</td><td>$-\sin x$</td></tr>
+        <tr><td>$f(x)g(x)$（積）</td><td>$f'(x)g(x) + f(x)g'(x)$</td></tr>
+        <tr><td>$f(g(x))$（合成）</td><td>$f'(g(x))\cdot g'(x)$</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ──────────────────────────────── 7. 積分 ──────────────────────────────── -->
+  <section class="section" id="integral">
+    <h2>7. 積分</h2>
+
+    <div class="box definition">
+      <div class="box-title">定義 7.1 — リーマン積分</div>
+      <p>区間 $[a, b]$ の分割 $\Delta: a = x_0 < x_1 < \cdots < x_n = b$ に対して
+         リーマン和を $S(\Delta) = \displaystyle\sum_{i=1}^n f(\xi_i)(x_i - x_{i-1})$ と定義する。
+         分割の幅の最大値 $|\Delta| \to 0$ のとき $S(\Delta)$ が一定値 $I$ に収束するならば、
+         $f$ は $[a,b]$ 上<strong>リーマン積分可能</strong>といい $I = \displaystyle\int_a^b f(x)\,dx$ と書く。</p>
+    </div>
+
+    <div class="box theorem">
+      <div class="box-title">定理 7.2 — 微積分の基本定理</div>
+      <p>$f$ が $[a, b]$ 上連続ならば、$F(x) = \displaystyle\int_a^x f(t)\,dt$ は $(a,b)$ 上微分可能で
+         $F'(x) = f(x)$。さらに $G'=f$ となる任意の原始関数 $G$ に対して</p>
+      $$\int_a^b f(x)\,dx = G(b) - G(a)$$
+    </div>
+
+    <h3>基本的な積分公式</h3>
+    <table class="info-table">
+      <thead><tr><th>被積分関数 $f(x)$</th><th>不定積分 $\int f(x)\,dx$</th></tr></thead>
+      <tbody>
+        <tr><td>$x^n \; (n \ne -1)$</td><td>$\dfrac{x^{n+1}}{n+1} + C$</td></tr>
+        <tr><td>$\dfrac{1}{x}$</td><td>$\ln|x| + C$</td></tr>
+        <tr><td>$e^x$</td><td>$e^x + C$</td></tr>
+        <tr><td>$\sin x$</td><td>$-\cos x + C$</td></tr>
+        <tr><td>$\cos x$</td><td>$\sin x + C$</td></tr>
+        <tr><td>$\dfrac{1}{\sqrt{1-x^2}}$</td><td>$\arcsin x + C$</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ──────────────────────────────── 8. 参考 ──────────────────────────────── -->
+  <section class="section" id="references">
+    <h2>8. 参考文献・関連リンク</h2>
+    <ul>
+      <li>C. F. Gauss, <em>Arithmetisch-geometrisches Mittel</em> (1799年 ノート、1866年 遺稿集収録)</li>
+      <li>J. M. Borwein &amp; P. B. Borwein, <em>Pi and the AGM</em>, Wiley, 1987</li>
+      <li>R. P. Brent, "Fast multiple-precision evaluation of elementary functions", <em>J. ACM</em>, 23(2), 1976</li>
+      <li>高木貞治, <em>解析概論</em>, 岩波書店（改訂第3版）</li>
+      <li>杉浦光夫, <em>解析入門 I・II</em>, 東京大学出版会</li>
+    </ul>
+    <p style="margin-top: 1rem;">
+      <a href="index.html" style="color: var(--primary); font-weight: bold;">← 2次元運動シミュレーションへ戻る</a>
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <p>解析学まとめサイト — ガウス数列の収束証明を含む数学解析リファレンス</p>
+</footer>
+
+</body>
+</html>
