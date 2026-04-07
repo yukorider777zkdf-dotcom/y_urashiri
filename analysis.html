@@ -6,7 +6,7 @@
   <title>解析学まとめサイト</title>
   <!-- MathJax for mathematical notation -->
   <script>
-    MathJax = {
+    window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
         displayMath: [['$$', '$$'], ['\\[', '\\]']],
@@ -15,7 +15,7 @@
       options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js" async></script>
   <style>
     :root {
       --primary: #2c5f8a;
@@ -220,10 +220,19 @@
   <a href="#agm">AGM の応用</a>
   <a href="#continuity">連続と微分</a>
   <a href="#integral">積分</a>
+  <a href="#gamma">ガンマ関数</a>
   <a href="#references">参考</a>
 </nav>
 
 <main>
+
+  <!-- AI 作成の注記 -->
+  <div style="background:#fff3cd; border:1px solid #ffc107; border-left:5px solid #ffc107;
+              border-radius:0 6px 6px 0; padding:.8rem 1.2rem; margin-bottom:1.5rem;
+              font-size:.92rem; color:#5d4037;">
+    ⚠️ このページは <strong>AI（GitHub Copilot）によって自動生成</strong> されたものです。
+    数学的内容の正確性については専門書・一次文献を参照してください。
+  </div>
 
   <!-- ──────────────────────────────── 1. 数列の基礎 ──────────────────────────────── -->
   <section class="section" id="basics">
@@ -309,7 +318,7 @@
         <tr><td>0</td><td>1.000000000</td><td>0.707106781</td><td>2.93 × 10⁻¹</td></tr>
         <tr><td>1</td><td>0.853553391</td><td>0.840896415</td><td>1.27 × 10⁻²</td></tr>
         <tr><td>2</td><td>0.847224903</td><td>0.847213085</td><td>1.18 × 10⁻⁵</td></tr>
-        <tr><td>3</td><td>0.847213994</td><td>0.847213994</td><td>< 10⁻⁹</td></tr>
+        <tr><td>3</td><td>0.847213994</td><td>0.847213994</td><td>&lt; 10⁻⁹</td></tr>
         <tr><td>4</td><td>0.847213994</td><td>0.847213994</td><td>≈ 0 (機械精度)</td></tr>
       </tbody>
     </table>
@@ -336,7 +345,7 @@
       <div class="proof-label">証明（補題 4.1）</div>
       <p>$(\sqrt{x} - \sqrt{y})^2 \ge 0$ を展開すると $x - 2\sqrt{xy} + y \ge 0$。
          整理して $\dfrac{x+y}{2} \ge \sqrt{xy}$。等号は $\sqrt{x}=\sqrt{y}$、
-         すなわち $x=y$ のとき。$\square$</p>
+         すなわち $x=y$ のとき。</p>
       <div class="qed">□</div>
     </div>
 
@@ -348,21 +357,27 @@
 
     <div class="proof">
       <div class="proof-label">証明（補題 4.2）</div>
+      <p><strong>数学的帰納法</strong>で示す。$n=0$ のとき $a_0 \ge b_0 > 0$ は仮定より成立。
+         $a_n \ge b_n > 0$ を帰納的仮定とする。</p>
       <ol class="step-list">
         <li>
+          <strong>$b_{n+1} \le a_{n+1}$</strong>（帰納的仮定から従う）：
+          帰納的仮定 $a_n \ge b_n$ と補題 4.1 より
+          $a_{n+1} = \dfrac{a_n+b_n}{2} \ge \sqrt{a_n b_n} = b_{n+1}$。
+        </li>
+        <li>
           <strong>$a_{n+1} \le a_n$</strong>（$\{a_n\}$ は単調減少）：
-          補題 4.1 より $a_{n+1} = \dfrac{a_n + b_n}{2} \le \dfrac{a_n + a_n}{2} = a_n$。
+          $b_n \le a_n$（帰納的仮定）より
+          $a_{n+1} = \dfrac{a_n + b_n}{2} \le \dfrac{a_n + a_n}{2} = a_n$。
         </li>
         <li>
           <strong>$b_n \le b_{n+1}$</strong>（$\{b_n\}$ は単調増加）：
-          $b_{n+1} = \sqrt{a_n b_n} \ge \sqrt{b_n b_n} = b_n$（$a_n \ge b_n$ を利用）。
-        </li>
-        <li>
-          <strong>$b_{n+1} \le a_{n+1}$</strong>：
-          補題 4.1 を $a_n, b_n$ に適用すると $a_{n+1} = \dfrac{a_n+b_n}{2} \ge \sqrt{a_n b_n} = b_{n+1}$。
+          $a_n \ge b_n$（帰納的仮定）より
+          $b_{n+1} = \sqrt{a_n b_n} \ge \sqrt{b_n \cdot b_n} = b_n$。
         </li>
       </ol>
-      <p>以上を合わせると $b_n \le b_{n+1} \le a_{n+1} \le a_n$。$\square$</p>
+      <p>以上を合わせると $b_n \le b_{n+1} \le a_{n+1} \le a_n$ が示された。
+         帰納法により全 $n \ge 0$ で成立する。</p>
       <div class="qed">□</div>
     </div>
 
@@ -402,7 +417,7 @@
           $M = \lim b_n \ge b_0 > 0$。
         </li>
       </ol>
-      <p>以上より $\displaystyle\lim_{n\to\infty} a_n = \lim_{n\to\infty} b_n = M(a_0, b_0) > 0$。$\square$</p>
+      <p>以上より $\displaystyle\lim_{n\to\infty} a_n = \lim_{n\to\infty} b_n = M(a_0, b_0) > 0$。</p>
       <div class="qed">□</div>
     </div>
 
@@ -558,9 +573,121 @@
     </table>
   </section>
 
-  <!-- ──────────────────────────────── 8. 参考 ──────────────────────────────── -->
+  <!-- ──────────────────────────────── 8. ガンマ関数 ──────────────────────────────── -->
+  <section class="section" id="gamma">
+    <h2>8. ガンマ関数と負の実数への拡張</h2>
+
+    <h3>8.1 正の実数上での定義</h3>
+
+    <div class="box definition">
+      <div class="box-title">定義 8.1 — ガンマ関数（Euler の積分表示）</div>
+      <p>$\text{Re}(z) > 0$ に対して</p>
+      $$\Gamma(z) = \int_0^{\infty} t^{z-1} e^{-t}\, dt$$
+      <p>と定義する。この積分は $\text{Re}(z) > 0$ において絶対収束し、正則関数を定める。</p>
+    </div>
+
+    <h3>8.2 関数等式と階乗との関係</h3>
+
+    <div class="box theorem">
+      <div class="box-title">定理 8.2 — 関数等式</div>
+      <p>$\text{Re}(z) > 0$ において</p>
+      $$\Gamma(z+1) = z\,\Gamma(z)$$
+      <p>とくに正整数 $n$ に対して $\Gamma(n) = (n-1)!$。</p>
+    </div>
+
+    <div class="proof">
+      <div class="proof-label">証明（定理 8.2）</div>
+      <p>部分積分により</p>
+      $$\Gamma(z+1)
+        = \int_0^\infty t^z e^{-t}\,dt
+        = \Bigl[-t^z e^{-t}\Bigr]_0^\infty + z\int_0^\infty t^{z-1}e^{-t}\,dt
+        = z\,\Gamma(z)$$
+      <p>初期値 $\Gamma(1) = \displaystyle\int_0^\infty e^{-t}\,dt = 1$ と帰納法より $\Gamma(n)=(n-1)!$。</p>
+      <div class="qed">□</div>
+    </div>
+
+    <h3>8.3 負の実数への拡張（解析接続）</h3>
+
+    <p>
+      ガンマ関数は $\text{Re}(z) > 0$ でのみ積分表示が収束するが、
+      関数等式 $\Gamma(z) = \dfrac{\Gamma(z+1)}{z}$ を用いて
+      <strong>解析接続</strong>により定義域を広げることができる。
+    </p>
+
+    <div class="box definition">
+      <div class="box-title">定義 8.3 — 負の実数上のガンマ関数（漸化式による拡張）</div>
+      <p>$-n-1 < z < -n$（$n = 0, 1, 2, \ldots$）の実数に対して</p>
+      $$\Gamma(z) = \frac{\Gamma(z+n+1)}{z(z+1)\cdots(z+n)}$$
+      <p>と定義する。ここで右辺の $\Gamma(z+n+1)$ は $\text{Re}(z+n+1) > 0$ なので
+         積分表示で計算できる。</p>
+    </div>
+
+    <div class="box remark">
+      <div class="box-title">注意 — 極（ポール）の位置</div>
+      <p>
+        分母 $z(z+1)\cdots(z+n)$ は $z = 0, -1, -2, \ldots, -n$ でゼロになるため、
+        $\Gamma(z)$ は非正整数 $z = 0, -1, -2, \ldots$ に<strong>1位の極</strong>を持ち、
+        それ以外の複素数全域で正則である。
+        極での留数は
+      </p>
+      $$\operatorname{Res}_{z=-n}\Gamma(z) = \frac{(-1)^n}{n!} \qquad (n = 0, 1, 2, \ldots)$$
+    </div>
+
+    <h3>8.4 負の値の計算例</h3>
+    <p>
+      関数等式を繰り返し適用して負の実数でのガンマ関数の値を求めることができる。
+      例えば $z = -\frac{1}{2}$ の場合：
+    </p>
+    $$\Gamma\!\left(-\tfrac{1}{2}\right)
+      = \frac{\Gamma\!\left(\tfrac{1}{2}\right)}{-\tfrac{1}{2}}
+      = \frac{\sqrt{\pi}}{-1/2}
+      = -2\sqrt{\pi}$$
+    <p>ここで $\Gamma\!\left(\dfrac{1}{2}\right) = \sqrt{\pi}$ を用いた。これは Gauss 積分
+       $\displaystyle\int_{-\infty}^{\infty} e^{-t^2}\,dt = \sqrt{\pi}$
+       の置換 $u = t^2$ から従う（Section 7 参照）。</p>
+
+    <table class="info-table">
+      <thead>
+        <tr><th>$z$</th><th>$\Gamma(z)$</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>$1/2$</td><td>$\sqrt{\pi} \approx 1.7725$</td><td>Gauss 積分</td></tr>
+        <tr><td>$-1/2$</td><td>$-2\sqrt{\pi} \approx -3.5449$</td><td>関数等式</td></tr>
+        <tr><td>$-3/2$</td><td>$\dfrac{4\sqrt{\pi}}{3} \approx 2.3633$</td><td>関数等式</td></tr>
+        <tr><td>$-5/2$</td><td>$-\dfrac{8\sqrt{\pi}}{15} \approx -0.9453$</td><td>関数等式</td></tr>
+        <tr><td>$0, -1, -2, \ldots$</td><td>定義されない（極）</td><td>1位の極</td></tr>
+      </tbody>
+    </table>
+
+    <h3>8.5 Weierstrass 積表示</h3>
+    <p>
+      ガンマ関数の逆数は<strong>至るところ正則</strong>な関数であり、
+      Weierstrass の積展開で次のように表される：
+    </p>
+    $$\frac{1}{\Gamma(z)}
+      = z\, e^{\gamma z} \prod_{n=1}^{\infty}
+        \left(1 + \frac{z}{n}\right)e^{-z/n}$$
+    <p>
+      ここで $\gamma = \lim_{n\to\infty}\!\left(\sum_{k=1}^n \frac{1}{k} - \ln n\right) \approx 0.57722$
+      は Euler–Mascheroni 定数である。この表示は $z$ が非正整数のとき $1/\Gamma(z)=0$ となることを
+      直接示しており、それらの点がちょうど極になることと整合する。
+    </p>
+
+    <div class="box theorem">
+      <div class="box-title">定理 8.4 — 反射公式（Euler）</div>
+      <p>$z \notin \mathbb{Z}$ に対して</p>
+      $$\Gamma(z)\,\Gamma(1-z) = \frac{\pi}{\sin(\pi z)}$$
+    </div>
+    <p>
+      この公式は $z = 1/2$ を代入すると $\Gamma(1/2)^2 = \pi$、
+      すなわち $\Gamma(1/2) = \sqrt{\pi}$ を与える。
+      また負の半整数での値（$z = -1/2, -3/2, \ldots$）を陽に計算するのに便利である。
+    </p>
+  </section>
+
+  <!-- ──────────────────────────────── 9. 参考 ──────────────────────────────── -->
   <section class="section" id="references">
-    <h2>8. 参考文献・関連リンク</h2>
+    <h2>9. 参考文献・関連リンク</h2>
     <ul>
       <li>C. F. Gauss, <em>Arithmetisch-geometrisches Mittel</em> (1799年 ノート、1866年 遺稿集収録)</li>
       <li>J. M. Borwein &amp; P. B. Borwein, <em>Pi and the AGM</em>, Wiley, 1987</li>
@@ -577,6 +704,7 @@
 
 <footer>
   <p>解析学まとめサイト — ガウス数列の収束証明を含む数学解析リファレンス</p>
+  <p style="margin-top:.4rem; font-size:.82rem;">このページは AI（GitHub Copilot）によって自動生成されました。</p>
 </footer>
 
 </body>
